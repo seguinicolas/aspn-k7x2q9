@@ -243,7 +243,7 @@ if(!window.L){document.body.insertAdjacentHTML('afterbegin','<div style="padding
 // Mode test : ouvrir l'adresse avec ?test=1 (rien n'est envoyé au Google Sheet)
 const TEST=new URLSearchParams(location.search).has('test');
 if(TEST)document.addEventListener('DOMContentLoaded',()=>{const b=document.createElement('div');b.textContent='MODE TEST — rien n\'est envoyé au Sheet';b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9998;background:#c00c;color:#fff;text-align:center;font-size:11px;padding:1px;pointer-events:none';document.body.appendChild(b)});
-const API='https://script.google.com/macros/s/AKfycbz6sD97H6fMLxV-n2gB4K6FJxnXZ2hwUHgYRKAdmNq24JG4keXBx4CUSFXJyjSODCkPlw/exec';
+const API='https://script.google.com/macros/s/AKfycbwj-UYM5bVQCOwJSJSuoIHdPT_Sb58pOkCUy_Yq9kLSzYWV81em_01G3si70ZQMaYvg/exec';
 L.Renderer.prototype.options.tolerance=6; // zone de toucher élargie sur téléphone
 const map = L.map('map',{preferCanvas:true}).setView([44.19, 2.34], 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);

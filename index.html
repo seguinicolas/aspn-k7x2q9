@@ -136,6 +136,41 @@ const TEST=new URLSearchParams(location.search).has('test');
 if(TEST)document.addEventListener('DOMContentLoaded',()=>{const b=document.createElement('div');b.textContent='MODE TEST — rien n\'est envoyé au Sheet';b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9998;background:#c00c;color:#fff;text-align:center;font-size:11px;padding:1px;pointer-events:none';document.body.appendChild(b)});
 // Vrai Google Sheet
 const API = 'https://script.google.com/macros/s/AKfycbwj-UYM5bVQCOwJSJSuoIHdPT_Sb58pOkCUy_Yq9kLSzYWV81em_01G3si70ZQMaYvg/exec';
+// ---- Mot de passe
+const ROLE='index',TK_KEY='tk_'+ROLE;
+let AUTH_ON=localStorage.getItem('auth_on')==='1';
+const tkExp=()=>Number((localStorage.getItem(TK_KEY)||'').split('.')[1])||0;
+const _fetch=window.fetch.bind(window);
+function afficherLogin(){
+  if(document.getElementById('login'))return;
+  const d=document.createElement('div');d.id='login';
+  d.style.cssText='position:fixed;inset:0;z-index:99999;background:#1a2b4cf2;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif';
+  d.innerHTML='<div style="background:#fff;border-radius:14px;padding:22px;width:84%;max-width:320px;display:flex;flex-direction:column;gap:10px"><b style="font-size:18px">Calendriers — accès protégé</b><input id="lg-pw" type="password" placeholder="Mot de passe" style="font-size:20px;padding:10px"><button id="lg-ok" style="font-size:18px;padding:12px;border:0;border-radius:10px;background:#1a73e8;color:#fff;font-weight:700">Entrer</button><div id="lg-msg" style="color:#c62828;font-weight:700;min-height:18px"></div></div>';
+  document.body.appendChild(d);
+  const go=async()=>{
+    const m=document.getElementById('lg-msg');m.textContent='Vérification…';
+    let r=null;
+    try{r=await _fetch(API,{method:'POST',body:JSON.stringify({action:'login',role:ROLE,pw:document.getElementById('lg-pw').value})}).then(x=>x.json())}catch(e){}
+    if(r&&r.ok){localStorage.setItem(TK_KEY,r.tk);location.reload()}
+    else m.textContent=(r&&r.erreur)||'Pas de réponse : vérifie la connexion.';
+  };
+  document.getElementById('lg-ok').onclick=go;
+  document.getElementById('lg-pw').onkeydown=e=>{if(e.key==='Enter')go()};
+}
+const ACCES=_fetch(API+'?auth=1').then(r=>r.json()).then(d=>{
+  AUTH_ON=!!(d&&d[ROLE]);localStorage.setItem('auth_on',AUTH_ON?'1':'0');
+  if(AUTH_ON&&tkExp()<=Date.now())afficherLogin();
+}).catch(()=>{});
+window.fetch=function(u,o){
+  if(typeof u!=='string'||u.indexOf(API)!==0)return _fetch(u,o);
+  return ACCES.then(()=>{
+    if(AUTH_ON&&tkExp()<=Date.now()){afficherLogin();throw new Error('connexion expirée')}
+    const tk=localStorage.getItem(TK_KEY)||'';
+    if(o&&typeof o.body==='string'){try{const b=JSON.parse(o.body);b.tk=tk;o={...o,body:JSON.stringify(b)}}catch(e){}}
+    else u+=(u.indexOf('?')<0?'?':'&')+'tk='+encodeURIComponent(tk);
+    return _fetch(u,o);
+  });
+};
 L.Renderer.prototype.options.tolerance=6; // zone de toucher élargie sur téléphone
 const map = L.map('map',{preferCanvas:true,zoomControl:false}).setView([44.19, 2.34], 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);

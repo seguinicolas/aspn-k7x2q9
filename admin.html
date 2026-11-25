@@ -204,6 +204,7 @@ table.cpt.rpa td.n{text-align:right}
   <button class="mi" id="ab-recap2" data-titre="Nouveau récapitulatif">📈 Nouveau récapitulatif</button>
   <button class="mi" id="ab-cpt" data-titre="Comptage">🧮 Comptage</button>
   <button class="mi" id="ab-param" data-titre="Paramètres">⚙️ Paramètres</button>
+   <button class="mi" id="ab-secu" data-titre="Sécurité">🔐 Sécurité</button>
   <div class="pied">Administration · menu v1</div>
 </nav>
 <div id="admin"><div class="in" style="padding-top:76px">
@@ -244,6 +245,41 @@ if(!window.L){document.body.insertAdjacentHTML('afterbegin','<div style="padding
 const TEST=new URLSearchParams(location.search).has('test');
 if(TEST)document.addEventListener('DOMContentLoaded',()=>{const b=document.createElement('div');b.textContent='MODE TEST — rien n\'est envoyé au Sheet';b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9998;background:#c00c;color:#fff;text-align:center;font-size:11px;padding:1px;pointer-events:none';document.body.appendChild(b)});
 const API='https://script.google.com/macros/s/AKfycbwj-UYM5bVQCOwJSJSuoIHdPT_Sb58pOkCUy_Yq9kLSzYWV81em_01G3si70ZQMaYvg/exec';
+// ---- Mot de passe
+const ROLE='admin',TK_KEY='tk_'+ROLE,AUTH_KEY='auth_on_'+ROLE;
+let AUTH_ON=localStorage.getItem(AUTH_KEY)==='1';
+const tkExp=()=>Number((localStorage.getItem(TK_KEY)||'').split('.')[1])||0;
+const _fetch=window.fetch.bind(window);
+function afficherLogin(){
+  if(document.getElementById('login'))return;
+  const d=document.createElement('div');d.id='login';
+  d.style.cssText='position:fixed;inset:0;z-index:99999;background:#1a2b4cf2;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif';
+  d.innerHTML='<div style="background:#fff;border-radius:14px;padding:22px;width:84%;max-width:320px;display:flex;flex-direction:column;gap:10px"><b style="font-size:18px">Calendriers — administration protégée</b><input id="lg-pw" type="password" placeholder="Mot de passe admin" style="font-size:20px;padding:10px"><button id="lg-ok" style="font-size:18px;padding:12px;border:0;border-radius:10px;background:#1a73e8;color:#fff;font-weight:700">Entrer</button><div id="lg-msg" style="color:#c62828;font-weight:700;min-height:18px"></div></div>';
+  document.body.appendChild(d);
+  const go=async()=>{
+    const m=document.getElementById('lg-msg');m.textContent='Vérification…';
+    let r=null;
+    try{r=await _fetch(API,{method:'POST',body:JSON.stringify({action:'login',role:ROLE,pw:document.getElementById('lg-pw').value})}).then(x=>x.json())}catch(e){}
+    if(r&&r.ok){localStorage.setItem(TK_KEY,r.tk);location.reload()}
+    else m.textContent=(r&&r.erreur)||'Pas de réponse : vérifie la connexion.';
+  };
+  document.getElementById('lg-ok').onclick=go;
+  document.getElementById('lg-pw').onkeydown=e=>{if(e.key==='Enter')go()};
+}
+const ACCES=_fetch(API+'?auth=1').then(r=>r.json()).then(d=>{
+  AUTH_ON=!!(d&&d[ROLE]);localStorage.setItem(AUTH_KEY,AUTH_ON?'1':'0');
+  if(AUTH_ON&&tkExp()<=Date.now())afficherLogin();
+}).catch(()=>{});
+window.fetch=function(u,o){
+  if(typeof u!=='string'||u.indexOf(API)!==0)return _fetch(u,o);
+  return ACCES.then(()=>{
+    if(AUTH_ON&&tkExp()<=Date.now()){afficherLogin();throw new Error('connexion expirée')}
+    const tk=localStorage.getItem(TK_KEY)||'';
+    if(o&&typeof o.body==='string'){try{const b=JSON.parse(o.body);b.tk=tk;b.src='admin';o={...o,body:JSON.stringify(b)}}catch(e){}}
+    else u+=(u.indexOf('?')<0?'?':'&')+'tk='+encodeURIComponent(tk)+'&src=admin';
+    return _fetch(u,o);
+  });
+};  
 L.Renderer.prototype.options.tolerance=6; // zone de toucher élargie sur téléphone
 const map = L.map('map',{preferCanvas:true}).setView([44.19, 2.34], 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
@@ -1756,6 +1792,24 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)actualiser
 majZoom();
 flush();
 window.addEventListener('online',flush);
+  $('ab-secu').onclick=async()=>{
+  let e={index:true,admin:true};
+  try{e=await _fetch(API+'?auth=1').then(r=>r.json())}catch(x){}
+  const champ='display:block;margin:2px 0 8px;padding:6px 8px;font-size:15px;width:260px';
+  const bloc=(role,titre)=>`<h3>${titre}</h3>
+    <label class="affc"><input type="checkbox" id="sc-${role}"${e[role]?' checked':''}> Mot de passe activé</label>
+    <label class="note">Mot de passe actuel<input type="password" id="sa-${role}" autocomplete="off" style="${champ}"></label>
+    <label class="note">Nouveau mot de passe (vide = ne pas changer)<input type="password" id="sn-${role}" autocomplete="new-password" style="${champ}"></label>
+    <button class="bt" id="sb-${role}">Enregistrer</button> <span id="sm-${role}" class="note"></span>`;
+  panneau('<h3 style="margin-top:0">Sécurité</h3>'+bloc('index','Application de terrain (index)')+bloc('admin','Administration (admin)')+'<p class="note">Le mot de passe actuel est exigé pour tout changement, y compris pour réactiver la protection. Connexion valable 24 h sur chaque appareil.</p>');
+  ['index','admin'].forEach(role=>$('sb-'+role).onclick=async()=>{
+    const m=$('sm-'+role);m.textContent='Enregistrement…';
+    let d=null;
+    try{d=await fetch(API,{method:'POST',body:JSON.stringify({action:'securite',role,ancien:$('sa-'+role).value,nouveau:$('sn-'+role).value,actif:$('sc-'+role).checked})}).then(r=>r.json())}catch(x){}
+    m.textContent=d&&d.ok?'✔ Enregistré.':(d&&d.erreur)||'Pas de réponse.';
+    m.style.color=d&&d.ok?'#2e7d32':'#c62828';
+  });
+};
 </script>
 </body>
 </html>

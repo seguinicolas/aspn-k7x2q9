@@ -1811,29 +1811,82 @@ window.addEventListener('online',flush);
     m.style.color=d&&d.ok?'#2e7d32':'#c62828';
   });
 };
-// ---- Années : mise en page seule (rien n'est branché, aucune écriture)
-$('ab-annees').onclick=()=>{
+  // ---- Années : statut réel (Parametres M5 / M10 / M11), clôture et réouverture
+function msgAn(t,erreur){const m=$('an-msg');if(m){m.textContent=t;m.style.color=erreur?'#c62828':'#2e7d32';m.style.fontWeight='700'}}
+async function envoyerStatut(action,corps){
+  if(TEST){msgAn("Mode test : rien n'est envoyé au Sheet.",true);return false}
+  msgAn('Envoi en cours…');
+  let d=null;
+  try{d=await fetch(API,{method:'POST',body:JSON.stringify({action,...corps})}).then(r=>r.json())}catch(e){d=null}
+  if(d&&d.ok)return true;
+  msgAn(d?'Refusé : '+(d.erreur||'erreur inconnue'):"Pas de réponse du Sheet : vérifie la cellule M10 de la feuille Parametres avant de recommencer.",true);
+  return false;
+}
+const champAn='display:block;margin:2px 0 8px;padding:6px 8px;font-size:15px;width:260px;max-width:100%;box-sizing:border-box';
+async function ouvrirAnnees(){
+  panneau('<p class="note">Chargement…</p>');
+  let d=null;
+  try{d=await lireParam()}catch(e){}
+  if(!d||d.cloture===undefined){
+    panneau('<p class="note" style="color:#c62828;font-weight:700">Statut de l\'année illisible : Code.gs n\'est pas à jour ou pas redéployé.</p><button class="bt" id="an-retry">Réessayer</button>');
+    $('an-retry').onclick=ouvrirAnnees;return;
+  }
+  const an=String(d.anneeCourante||'').trim(),clo=!!d.cloture;
+  const bouton=clo?'<button class="bt" id="an-rouvrir">🔓 Rouvrir l\'année</button>'
+    :an?'<button class="bt" id="an-cloturer">🔒 Clôturer l\'année</button>'
+    :'<p class="note" style="color:#c62828;font-weight:700">L\'année en cours n\'est pas renseignée (feuille Parametres, cellule M5).</p>';
   panneau(`<div class="pbox"><h3 style="margin-top:0">Années</h3>
-    <p class="apercu">Mise en page seule pour l'instant : le bouton ne fait rien et les années affichées sont des exemples.</p>
-
     <h3>Année en cours</h3>
-    <table class="cpt"><tr><th>Année</th><th>Statut</th></tr>
-    <tr><td>2027</td><td>🟢 Ouverte</td></tr></table>
-    <p class="note">Clôturer l'année : l'application passe en consultation seule, plus aucune saisie ni modification.</p>
-    <button class="bt" id="an-cloturer">🔒 Clôturer l'année</button>
-
-    <h3>Historique des années</h3>
-    <table class="cpt"><tr><th>Année</th><th>Statut</th></tr>
-    <tr><td>2027</td><td>🟢 Ouverte</td></tr>
-    <tr><td>2026</td><td>🔒 Clôturée</td></tr></table>
-    <p class="note">Consultation seule : on retrouve ici les années passées.</p>
-
+    <table class="cpt"><tr><th>Année</th><th>Statut</th><th>Dernier changement</th></tr>
+    <tr><td>${esc(an)||'—'}</td><td>${clo?'🔒 Clôturée':'🟢 Ouverte'}</td><td>${esc(d.dernierChangement)||'—'}</td></tr></table>
+    <div id="an-action" style="margin-top:10px">${bouton}</div>
+    <p id="an-msg" class="note"></p>
     <h3>Créer une nouvelle année</h3>
-    <p class="note">Pas encore disponible : le passage 2026 → 2027 a été fait à la main.</p>
-    <button class="bt" id="an-creer" disabled style="opacity:.5">➕ Créer une nouvelle année</button>
-    <p id="an-msg" class="note" style="font-weight:700"></p></div>`);
-  $('an-cloturer').onclick=()=>{$('an-msg').textContent="Pas encore branché : rien n'a été modifié.";$('an-msg').style.color='#c62828'};
-};
+    <p class="note">Pas encore disponible.</p>
+    <button class="bt" disabled style="opacity:.5">➕ Créer une nouvelle année</button>
+    <p class="note" style="margin-top:22px">Années de comparaison dans la feuille Historique : ${esc((d.annees||[]).join(', '))||'—'}</p></div>`);
+  if(clo)$('an-rouvrir').onclick=()=>formRouvrir(an);
+  else if(an)$('an-cloturer').onclick=()=>formCloturer(an);
+}
+function formCloturer(an){
+  $('an-action').innerHTML=`<div style="background:#fff;border:2px solid #c62828;border-radius:10px;padding:12px 14px">
+    <b>Clôturer l'année ${esc(an)}</b>
+    <p class="note">Une fois l'année clôturée, plus aucun ajout ni aucune modification ne sera possible, ni dans l'application de terrain, ni dans l'administration (dons, absents, comptages, poches, paramètres). Restent possibles : la consultation, Actualiser, le changement des mots de passe et la réouverture.</p>
+    <label class="affc"><input type="checkbox" id="an-c1"> J'ai compris : plus aucune saisie ni modification ne sera possible.</label>
+    <label class="affc"><input type="checkbox" id="an-c2"> Je me suis assuré que toutes les équipes ont envoyé leurs saisies et que tous les comptages sont faits.</label>
+    <label class="note">Retape l'année en cours (${esc(an)}) pour confirmer<input id="an-an" inputmode="numeric" autocomplete="off" style="${champAn}"></label>
+    <label class="note">Mot de passe admin<input type="password" id="an-pw" autocomplete="off" style="${champAn}"></label>
+    <div class="boutons"><button type="button" class="rouge" id="an-non">Annuler</button><button type="button" class="vert" id="an-oui">Clôturer l'année</button></div></div>`;
+  const maj=()=>{const ok=$('an-c1').checked&&$('an-c2').checked&&$('an-an').value.trim()===an&&$('an-pw').value!=='';$('an-oui').disabled=!ok;$('an-oui').style.opacity=ok?'1':'.45'};
+  ['an-c1','an-c2','an-an','an-pw'].forEach(i=>{$(i).oninput=maj;$(i).onchange=maj});
+  maj();
+  $('an-non').onclick=ouvrirAnnees;
+  $('an-oui').onclick=async()=>{
+    if(!confirm("Dernière confirmation.\n\nClôturer l'année "+an+" ? Plus aucune saisie ni modification ne sera possible tant que tu ne l'auras pas rouverte."))return;
+    $('an-oui').disabled=true;
+    if(await envoyerStatut('cloture',{annee:$('an-an').value.trim(),pw:$('an-pw').value})){
+      await ouvrirAnnees();
+      msgAn("✔ Année clôturée : l'application de terrain et l'administration sont en consultation seule.");
+    }else maj();
+  };
+}
+function formRouvrir(an){
+  $('an-action').innerHTML=`<div style="background:#fff;border:2px solid #1a73e8;border-radius:10px;padding:12px 14px">
+    <b>Rouvrir l'année ${esc(an)}</b>
+    <p class="note">Les saisies et les modifications redeviennent possibles, dans l'application de terrain comme dans l'administration.</p>
+    <label class="note">Mot de passe admin<input type="password" id="an-pw" autocomplete="off" style="${champAn}"></label>
+    <div class="boutons"><button type="button" class="rouge" id="an-non">Annuler</button><button type="button" class="vert" id="an-oui">Rouvrir l'année</button></div></div>`;
+  $('an-non').onclick=ouvrirAnnees;
+  $('an-oui').onclick=async()=>{
+    if(!$('an-pw').value){msgAn('Saisis le mot de passe admin.',true);return}
+    if(!confirm("Rouvrir l'année "+an+" ? Les saisies redeviendront possibles."))return;
+    if(await envoyerStatut('reouverture',{pw:$('an-pw').value})){
+      await ouvrirAnnees();
+      msgAn('✔ Année rouverte.');
+    }
+  };
+}
+$('ab-annees').onclick=ouvrirAnnees;
 </script>
 </body>
 </html>

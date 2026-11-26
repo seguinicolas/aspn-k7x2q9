@@ -190,6 +190,29 @@ table.cpt.eqt td:first-child{text-align:center}
 .sso button.on{background:#1a73e8;color:#fff}
 table.cpt.rpa td{text-align:left}
 table.cpt.rpa td.n{text-align:right}
+/* Fenêtre « Nouvelle année » */
+#na{position:fixed;inset:0;z-index:2700;background:#f4f6fa;display:none;flex-direction:column;font-family:system-ui,sans-serif}
+#na.open{display:flex}
+#na .tete{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 16px;background:#1a2b4c;color:#fff}
+#na .tete b{font-size:17px}
+#na .tete button{height:36px;padding:0 14px;border:1px solid #ffffff88;border-radius:8px;background:transparent;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+#na .tete button:hover{background:#ffffff22}
+#na .etapes{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;background:#fff;border-bottom:1px solid #cfd6e4}
+#na .etapes span{padding:6px 12px;border-radius:16px;background:#e8eefb;color:#1a2b4c;font-size:14px;font-weight:700}
+#na .etapes span.on{background:#1a73e8;color:#fff}
+#na .etapes span.fait{background:#cdeccd}
+#na .corps{flex:1;overflow:auto;padding:14px 16px;width:100%;max-width:900px;margin:0 auto;box-sizing:border-box}
+#na .pied{display:flex;justify-content:space-between;gap:10px;padding:10px 16px;background:#fff;border-top:1px solid #cfd6e4}
+#na .bt{font-size:16px;padding:10px 14px;border:2px solid #1a73e8;border-radius:8px;background:#fff;color:#1a73e8;font-weight:700;cursor:pointer}
+#na .bt:disabled{opacity:.45;cursor:default}
+#na .note{color:#555;font-size:14px}
+#na input.na-in,#na select.na-in{width:100%;box-sizing:border-box;padding:6px 8px;font-size:15px;border:1px solid #9fb7c9;border-radius:6px;background:#fff}
+table.cpt.na-l td{text-align:left}
+.na-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:8px 0}
+.na-cols>div{background:#fff;border:1px solid #cfd6e4;border-radius:8px;padding:10px 14px;font-size:14px}
+.na-cols ul{margin:4px 0 0;padding-left:18px}
+
+
 </style>
 </head>
 <body>
@@ -1842,12 +1865,14 @@ async function ouvrirAnnees(){
     <div id="an-action" style="margin-top:10px">${bouton}</div>
     <p id="an-msg" class="note"></p>
     <h3>Créer une nouvelle année</h3>
-    <p class="note">Pas encore disponible.</p>
-    <button class="bt" disabled style="opacity:.5">➕ Créer une nouvelle année</button>
+     <p class="note">Assistant en 5 étapes (mise en page seulement pour l'instant).</p>
+    <button class="bt" id="an-nouvelle">➕ Créer une nouvelle année</button>
     <p class="note" style="margin-top:22px">Années de comparaison dans la feuille Historique : ${esc((d.annees||[]).join(', '))||'—'}</p></div>`);
   if(clo)$('an-rouvrir').onclick=()=>formRouvrir(an);
   else if(an)$('an-cloturer').onclick=()=>formCloturer(an);
+  $('an-nouvelle').onclick=()=>ouvrirNouvelleAnnee(an,clo);
 }
+
 function formCloturer(an){
   $('an-action').innerHTML=`<div style="background:#fff;border:2px solid #c62828;border-radius:10px;padding:12px 14px">
     <b>Clôturer l'année ${esc(an)}</b>
@@ -1887,6 +1912,128 @@ function formRouvrir(an){
   };
 }
 $('ab-annees').onclick=ouvrirAnnees;
+  // ===== NOUVELLE ANNÉE : fenêtre en 5 étapes (MISE EN PAGE SEULE, données fictives) =====
+const NA_ETAPES=['Vérifications','Personnel et équipes','Couches','Création','Check-list'];
+const NA_NOMS=['Aubert','Barret','Cazals','Delmas','Estève','Fabre','Gaubert','Hugues','Issanchou','Jalbert','Kerbrat','Lacombe','Maury','Nadal','Ouvrard','Pujol','Quintard','Rouquette','Salvan','Teyssier','Uzès','Vidal','Wilmart','Yvars','Zanotti','Alibert','Bouyssou','Calmels','Dupuy','Escande'];
+const NA_INIT='ABCDEFGHJKLMNPRSTV';
+const naCode=i=>NA_NOMS[i]+' '+NA_INIT[i%NA_INIT.length];
+const naTour=i=>i<26?String(Math.floor(i/2)+1):'—';
+const NA_PAS="Mise en page seule : ce bouton n'est pas encore branché.";
+const NA_LISTE=[
+  "Dans le nouveau fichier : Extensions › Apps Script › Déployer › Nouveau déploiement (Application web).",
+  "Copier la nouvelle URL d'API.",
+  "Coller cette URL dans index.html et admin.html du nouveau dépôt.",
+  "Déposer le nouveau adresses.geojson dans le dépôt GitHub.",
+  "Vérifier les mots de passe (onglet Sécurité) et tester en navigation privée."
+];
+let NA={etape:0,sous:'pers',an:'',suiv:'',clo:false,fait:{}};
+function naMsg(t){const m=$('na-msg');if(m){m.textContent=t;m.style.color='#b26a00';m.style.fontWeight='700'}}
+function naApercu(){return '<p class="apercu">Mise en page seule : données fictives, rien n\'est envoyé au Google Sheet.</p>'}
+
+// Étape 1 : vérifications (seule la ligne « année clôturée » est réelle ; les autres seront branchées plus tard)
+function naE0(){
+  const ok='<b style="color:#2e7d32">✔ OK</b>',tbd='<span style="color:#777">⏳ à brancher</span>';
+  const r=(l,s,d)=>'<tr><td>'+l+'</td><td>'+s+'</td><td>'+d+'</td></tr>';
+  return '<p class="note">Avant de créer la nouvelle année, on vérifie que tout est en ordre.</p>'
+    +'<table class="cpt na-l"><tr><th>Vérification</th><th>État</th><th>Détail</th></tr>'
+    +r("L'année "+esc(NA.an||'—')+" est clôturée",NA.clo?ok:'<b style="color:#c62828">✖ Non</b>',NA.clo?'Consultation seule.':"À clôturer d'abord (onglet Années).")
+    +r('Toutes les poches sont comptées',tbd,'Aucune poche non comptée (hors regroupage).')
+    +r('Le fichier calendrier_'+esc(NA.suiv)+" n'existe pas déjà",tbd,'Évite de créer un doublon.')
+    +r("L'ancien fichier est conservé",tbd,"Il n'est jamais modifié : il reste en consultation seule et sert de sauvegarde.")
+    +'</table>';
+}
+
+// Étape 2 : personnel, équipes, calendriers par personne
+function naE1(){
+  const tabs=[['pers','Personnel'],['eq','Équipes'],['cal','Calendriers par personne']];
+  let h='<div class="onglets" id="na-sous">'+tabs.map(([k,l])=>'<button data-s="'+k+'" class="'+(NA.sous===k?'on':'')+'">'+l+'</button>').join('')+'</div>'
+    +naApercu();
+  const idx=NA_NOMS.map((_,i)=>i);
+  if(NA.sous==='pers'){
+    h+='<div class="barre-ajout"><input placeholder="Nom"><input placeholder="Prénom"><button class="bt na-nc">➕ Ajouter</button></div>'
+      +'<table class="cpt na-l"><tr><th>Personne</th><th>Tournée</th><th></th></tr>'
+      +idx.map(i=>'<tr><td>'+esc(naCode(i))+'</td><td>'+naTour(i)+'</td><td><button class="sup na-nc">🗑 Supprimer</button></td></tr>').join('')+'</table>'
+      +'<p class="note">'+idx.length+' personnes · 4 sans équipe (c\'est normal).</p>';
+  }else if(NA.sous==='eq'){
+    h+='<table class="cpt na-l"><tr><th>Tournée</th><th>Nom de la tournée</th><th>Équipier 1</th><th>Équipier 2</th></tr>'
+      +[...Array(13)].map((_,t)=>'<tr><td style="text-align:center">'+(t+1)+'</td><td><input class="na-in" value="Secteur '+(t+1)+'"></td><td><select class="na-in"><option>'+esc(naCode(2*t))+'</option></select></td><td><select class="na-in"><option>'+esc(naCode(2*t+1))+'</option></select></td></tr>').join('')+'</table>'
+      +'<p class="note">Même règle que dans Paramètres : une personne = une seule tournée.</p>';
+  }else{
+    h+='<div class="barre-ajout" style="align-items:center"><label class="note">Calendriers par personne (valeur par défaut)</label><input id="na-def" type="number" min="0" value="20" style="flex:0 0 110px;min-width:0"><button class="bt" id="na-appl">Appliquer à tous</button></div>'
+      +'<table class="cpt na-l"><tr><th>Personne</th><th>Tournée</th><th>Calendriers à faire</th></tr>'
+      +idx.map(i=>'<tr><td>'+esc(naCode(i))+'</td><td>'+naTour(i)+'</td><td><input class="na-in na-nb" type="number" min="0" value="20" style="max-width:110px"></td></tr>').join('')+'</table>';
+  }
+  return h;
+}
+
+// Étape 3 : couches (nouveau adresses.geojson)
+function naE2(){
+  const N={don:412,absent:96,inoccupe:31,refus:12,pompier:25,supprimer:7};
+  return naApercu()
+    +'<p class="note">Génère le nouveau fichier <b>adresses.geojson</b> pour la saison <b>'+esc(NA.suiv)+'</b> : on retire les adresses inoccupées et « à supprimer », et on ne garde que les identifiants dans la table attributaire.</p>'
+    +TYPES_ADR.map(([t,l])=>'<label class="affc"><input type="checkbox"'+(t==='supprimer'?'':' checked')+'> '+l+' <span class="note">('+N[t]+')</span></label>').join('')
+    +'<label class="affc"><input type="checkbox"> Garder aussi les adresses non renseignées cette année <span class="note">(1 250)</span></label>'
+    +'<label class="affc"><input type="checkbox" checked> Ajouter les points posés à la main ou à la position <span class="note">(58)</span></label>'
+    +'<label class="affc"><input type="checkbox" checked> Garder le champ adresse (adr) dans la couche</label>'
+    +'<p class="note">Décocher « adresse » ne convient que si l\'adresse est lue ailleurs (feuille Annee_precedente) : sinon la carte n\'affichera plus d\'adresse.</p>'
+    +'<p class="note" style="font-weight:700">Résultat (fictif) : 1 180 adresses gardées sur 1 262 (82 retirées).</p>'
+    +'<button class="bt na-nc">⬇️ Télécharger adresses.geojson</button>'
+    +'<p class="note">Étape manuelle : tu déposes ensuite ce fichier dans le dépôt GitHub de la nouvelle année (garde l\'ancien de côté).</p>';
+}
+
+// Étape 4 : création du fichier
+function naE3(){
+  const f='calendrier_'+esc(NA.suiv);
+  return naApercu()
+    +'<p class="note">Rien n\'est créé avant le bouton ci-dessous. L\'ancien fichier n\'est jamais modifié. <i>(Contenu à valider avant de brancher.)</i></p>'
+    +'<div class="na-cols">'
+    +'<div><b>📋 Copié et gardé</b><ul><li>Parametres : personnel et équipes validés à l\'étape 2</li><li>Historique, avec les totaux de l\'année terminée</li><li>Le Code.gs</li></ul></div>'
+    +'<div><b>🧹 Vidé</b><ul><li>Calendriers (les dons)</li><li>Session</li><li>recap_compta</li><li>Bilan_app et Bilan_comptage</li></ul></div>'
+    +'<div><b>✏️ Mis à jour</b><ul><li>Année en cours = '+esc(NA.suiv)+'</li><li>Statut = en cours</li><li>Annee_precedente = données de l\'année terminée</li></ul></div>'
+    +'</div>'
+    +'<p style="font-weight:700">Nouveau fichier : '+f+'</p>'
+    +'<label class="affc"><input type="checkbox"> Je confirme la création de '+f+'</label>'
+    +'<button class="bt na-nc">➕ Créer '+f+'</button>';
+}
+
+// Étape 5 : check-list des étapes manuelles
+function naE4(){
+  return '<p class="note">Ces étapes ne peuvent pas être faites par l\'application : tu les coches au fur et à mesure.</p>'
+    +NA_LISTE.map((t,i)=>'<label class="affc"><input type="checkbox" class="na-ck" data-k="'+i+'"'+(NA.fait[i]?' checked':'')+'> '+esc(t)+'</label>').join('')
+    +'<p id="na-prog" style="font-weight:700"></p>';
+}
+function naCompte(){
+  const p=$('na-prog');if(!p)return;
+  const n=NA_LISTE.filter((_,i)=>NA.fait[i]).length;
+  p.textContent=n+' / '+NA_LISTE.length+' étapes faites';p.style.color=n===NA_LISTE.length?'#2e7d32':'#555';
+}
+function naFermer(){const m=$('na');if(m)m.classList.remove('open')}
+function naRendre(){
+  const m=$('na');
+  m.innerHTML='<div class="tete"><b>Nouvelle année — '+esc(NA.suiv)+'</b><button id="na-x">Fermer</button></div>'
+    +'<div class="etapes">'+NA_ETAPES.map((t,i)=>'<span class="'+(i===NA.etape?'on':i<NA.etape?'fait':'')+'">'+(i+1)+'. '+t+'</span>').join('')+'</div>'
+    +'<div class="corps">'+[naE0,naE1,naE2,naE3,naE4][NA.etape]()+'<p id="na-msg" class="note"></p></div>'
+    +'<div class="pied"><button class="bt" id="na-prec"'+(NA.etape?'':' disabled')+'>← Précédent</button><button class="bt" id="na-suiv">'+(NA.etape<4?'Suivant →':'Terminer')+'</button></div>';
+  $('na-x').onclick=naFermer;
+  $('na-prec').onclick=()=>{if(NA.etape>0){NA.etape--;naRendre()}};
+  $('na-suiv').onclick=()=>{if(NA.etape<4){NA.etape++;naRendre()}else naFermer()};
+  m.querySelectorAll('.na-nc').forEach(b=>b.onclick=()=>naMsg(NA_PAS));
+  const so=$('na-sous');if(so)so.querySelectorAll('button').forEach(b=>b.onclick=()=>{NA.sous=b.dataset.s;naRendre()});
+  const ap=$('na-appl');if(ap)ap.onclick=()=>{m.querySelectorAll('.na-nb').forEach(i=>{i.value=$('na-def').value})};
+  m.querySelectorAll('.na-ck').forEach(c=>c.onchange=()=>{NA.fait[c.dataset.k]=c.checked;naCompte()});
+  naCompte();
+  m.querySelector('.corps').scrollTop=0;
+}
+function ouvrirNouvelleAnnee(an,clo){
+  const n=Number(an);
+  NA={etape:0,sous:'pers',an:String(an||''),suiv:n?String(n+1):'XXXX',clo:!!clo,fait:{}};
+  let m=$('na');
+  if(!m){m=document.createElement('div');m.id='na';document.body.appendChild(m)}
+  m.classList.add('open');
+  naRendre();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')naFermer()});
+
 </script>
 </body>
 </html>

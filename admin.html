@@ -205,6 +205,7 @@ table.cpt.rpa td.n{text-align:right}
   <button class="mi" id="ab-cpt" data-titre="Comptage">🧮 Comptage</button>
   <button class="mi" id="ab-param" data-titre="Paramètres">⚙️ Paramètres</button>
    <button class="mi" id="ab-secu" data-titre="Sécurité">🔐 Sécurité</button>
+  <button class="mi" id="ab-annees" data-titre="Années">📅 Années</button>
   <div class="pied">Administration · menu v1</div>
 </nav>
 <div id="admin"><div class="in" style="padding-top:76px">
@@ -1809,6 +1810,29 @@ window.addEventListener('online',flush);
     m.textContent=d&&d.ok?'✔ Enregistré.':(d&&d.erreur)||'Pas de réponse.';
     m.style.color=d&&d.ok?'#2e7d32':'#c62828';
   });
+};
+// ---- Années : mise en page seule (rien n'est branché, aucune écriture)
+$('ab-annees').onclick=()=>{
+  panneau(`<div class="pbox"><h3 style="margin-top:0">Années</h3>
+    <p class="apercu">Mise en page seule pour l'instant : le bouton ne fait rien et les années affichées sont des exemples.</p>
+
+    <h3>Année en cours</h3>
+    <table class="cpt"><tr><th>Année</th><th>Statut</th></tr>
+    <tr><td>2027</td><td>🟢 Ouverte</td></tr></table>
+    <p class="note">Clôturer l'année : l'application passe en consultation seule, plus aucune saisie ni modification.</p>
+    <button class="bt" id="an-cloturer">🔒 Clôturer l'année</button>
+
+    <h3>Historique des années</h3>
+    <table class="cpt"><tr><th>Année</th><th>Statut</th></tr>
+    <tr><td>2027</td><td>🟢 Ouverte</td></tr>
+    <tr><td>2026</td><td>🔒 Clôturée</td></tr></table>
+    <p class="note">Consultation seule : on retrouve ici les années passées.</p>
+
+    <h3>Créer une nouvelle année</h3>
+    <p class="note">Pas encore disponible : le passage 2026 → 2027 a été fait à la main.</p>
+    <button class="bt" id="an-creer" disabled style="opacity:.5">➕ Créer une nouvelle année</button>
+    <p id="an-msg" class="note" style="font-weight:700"></p></div>`);
+  $('an-cloturer').onclick=()=>{$('an-msg').textContent="Pas encore branché : rien n'a été modifié.";$('an-msg').style.color='#c62828'};
 };
 </script>
 </body>

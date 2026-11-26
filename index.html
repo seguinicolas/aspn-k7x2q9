@@ -8,7 +8,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>window.L||document.write('<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>')</script>
 <script>window.L||document.write('<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"><\/script>')</script>
-<style>
+<script>document.write('<script src="config.js?v='+Date.now()+'"><\/script>')</script>
+
+  <style>
   html,body{height:100%;margin:0;font-family:system-ui,sans-serif}
   #map{position:absolute;inset:0 0 90px 0}
   #bar{position:absolute;left:0;right:0;bottom:0;height:90px;display:flex;gap:8px;padding:8px;box-sizing:border-box;background:#222}
@@ -141,7 +143,8 @@ if(!window.L){document.body.insertAdjacentHTML('afterbegin','<div style="padding
 const TEST=new URLSearchParams(location.search).has('test');
 if(TEST)document.addEventListener('DOMContentLoaded',()=>{const b=document.createElement('div');b.textContent='MODE TEST — rien n\'est envoyé au Sheet';b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9998;background:#c00c;color:#fff;text-align:center;font-size:11px;padding:1px;pointer-events:none';document.body.appendChild(b)});
 // Vrai Google Sheet
-const API = 'https://script.google.com/macros/s/AKfycbwj-UYM5bVQCOwJSJSuoIHdPT_Sb58pOkCUy_Yq9kLSzYWV81em_01G3si70ZQMaYvg/exec';
+if(!window.CONFIG||!window.CONFIG.API){document.body.insertAdjacentHTML('afterbegin','<div style="padding:24px;font:17px sans-serif">Fichier config.js introuvable ou incomplet : l\'URL d\'API n\'est pas définie.</div>');throw new Error('config.js manquant')}
+const URL_SHEET = window.CONFIG.API;
 // ---- Mot de passe
 const ROLE='index',TK_KEY='tk_'+ROLE;
 let AUTH_ON=localStorage.getItem('auth_on')==='1';

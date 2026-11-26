@@ -1913,7 +1913,7 @@ function formRouvrir(an){
 }
 $('ab-annees').onclick=ouvrirAnnees;
   // ===== NOUVELLE ANNÉE : fenêtre en 5 étapes (MISE EN PAGE SEULE, données fictives) =====
-const NA_ETAPES=['Vérifications','Personnel et équipes','Couches','Création','Check-list'];
+const NA_ETAPES=['Vérifications','Couches','Création','Check-list'];
 const NA_NOMS=['Aubert','Barret','Cazals','Delmas','Estève','Fabre','Gaubert','Hugues','Issanchou','Jalbert','Kerbrat','Lacombe','Maury','Nadal','Ouvrard','Pujol','Quintard','Rouquette','Salvan','Teyssier','Uzès','Vidal','Wilmart','Yvars','Zanotti','Alibert','Bouyssou','Calmels','Dupuy','Escande'];
 const NA_INIT='ABCDEFGHJKLMNPRSTV';
 const naCode=i=>NA_NOMS[i]+' '+NA_INIT[i%NA_INIT.length];
@@ -1924,8 +1924,12 @@ const NA_LISTE=[
   "Copier la nouvelle URL d'API.",
   "Coller cette URL dans index.html et admin.html du nouveau dépôt.",
   "Déposer le nouveau adresses.geojson dans le dépôt GitHub.",
-  "Vérifier les mots de passe (onglet Sécurité) et tester en navigation privée."
+  "Vérifier les mots de passe (onglet Sécurité) et, s'ils n'ont pas été repris, relancer initialiserMotsDePasse dans le nouveau fichier.",
+  "Dans la nouvelle admin › Paramètres : valider le personnel (onglet Personnel) et les équipes (onglet Équipes).",
+  "Dans la nouvelle admin › Paramètres › Divers : vérifier le nombre de calendriers par personne.",
+  "Tester en navigation privée."
 ];
+
 let NA={etape:0,sous:'pers',an:'',suiv:'',clo:false,fait:{}};
 function naMsg(t){const m=$('na-msg');if(m){m.textContent=t;m.style.color='#b26a00';m.style.fontWeight='700'}}
 function naApercu(){return '<p class="apercu">Mise en page seule : données fictives, rien n\'est envoyé au Google Sheet.</p>'}
@@ -1987,7 +1991,7 @@ function naE3(){
   return naApercu()
     +'<p class="note">Rien n\'est créé avant le bouton ci-dessous. L\'ancien fichier n\'est jamais modifié. <i>(Contenu à valider avant de brancher.)</i></p>'
     +'<div class="na-cols">'
-    +'<div><b>📋 Copié et gardé</b><ul><li>Parametres : personnel et équipes validés à l\'étape 2</li><li>Historique, avec les totaux de l\'année terminée</li><li>Le Code.gs</li></ul></div>'
+    +'<div><b>📋 Copié et gardé</b><ul><li>Parametres : personnel et équipes de l\'an dernier (à valider ensuite dans la nouvelle admin)</li><li>Historique, avec les totaux de l\'année terminée</li><li>Le Code.gs</li></ul></div>'
     +'<div><b>🧹 Vidé</b><ul><li>Calendriers (les dons)</li><li>Session</li><li>recap_compta</li><li>Bilan_app et Bilan_comptage</li></ul></div>'
     +'<div><b>✏️ Mis à jour</b><ul><li>Année en cours = '+esc(NA.suiv)+'</li><li>Statut = en cours</li><li>Annee_precedente = données de l\'année terminée</li></ul></div>'
     +'</div>'
@@ -2012,11 +2016,11 @@ function naRendre(){
   const m=$('na');
   m.innerHTML='<div class="tete"><b>Nouvelle année — '+esc(NA.suiv)+'</b><button id="na-x">Fermer</button></div>'
     +'<div class="etapes">'+NA_ETAPES.map((t,i)=>'<span class="'+(i===NA.etape?'on':i<NA.etape?'fait':'')+'">'+(i+1)+'. '+t+'</span>').join('')+'</div>'
-    +'<div class="corps">'+[naE0,naE1,naE2,naE3,naE4][NA.etape]()+'<p id="na-msg" class="note"></p></div>'
-    +'<div class="pied"><button class="bt" id="na-prec"'+(NA.etape?'':' disabled')+'>← Précédent</button><button class="bt" id="na-suiv">'+(NA.etape<4?'Suivant →':'Terminer')+'</button></div>';
+    +'<div class="corps">'+[naE0,naE2,naE3,naE4][NA.etape]()+'<p id="na-msg" class="note"></p></div>'
+    +'<div class="pied"><button class="bt" id="na-prec"'+(NA.etape?'':' disabled')+'>← Précédent</button><button class="bt" id="na-suiv">'+(NA.etape<3?'Suivant →':'Terminer')+'</button></div>';
   $('na-x').onclick=naFermer;
   $('na-prec').onclick=()=>{if(NA.etape>0){NA.etape--;naRendre()}};
-  $('na-suiv').onclick=()=>{if(NA.etape<4){NA.etape++;naRendre()}else naFermer()};
+  $('na-suiv').onclick=()=>{if(NA.etape<3){NA.etape++;naRendre()}else naFermer()};
   m.querySelectorAll('.na-nc').forEach(b=>b.onclick=()=>naMsg(NA_PAS));
   const so=$('na-sous');if(so)so.querySelectorAll('button').forEach(b=>b.onclick=()=>{NA.sous=b.dataset.s;naRendre()});
   const ap=$('na-appl');if(ap)ap.onclick=()=>{m.querySelectorAll('.na-nb').forEach(i=>{i.value=$('na-def').value})};

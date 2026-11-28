@@ -761,8 +761,8 @@ async function telechargerAdresses(){
   setTimeout(()=>URL.revokeObjectURL(url),10000);
   msg.textContent='✔ '+nomFichierAdr()+' généré : '+feats.length+' adresses (dont '+ajoutes+' ajoutée'+(ajoutes>1?'s':'')+' depuis les points posés).';msg.style.color='#2e7d32';
 }
-function brancherAdresses(){
-  document.querySelectorAll('#apanel input[id^="adr-"]').forEach(i=>{i.onchange=()=>{majResAdr();majConf()}});
+function brancherAdresses(racine){
+  document.querySelectorAll((racine||'#apanel')+' input[id^="adr-"]').forEach(i=>{i.onchange=()=>{majResAdr();majConf()}});
   majResAdr();majConf();
   $('dl-adr').onclick=telechargerAdresses;
 }
@@ -1974,17 +1974,9 @@ function naE1(){
 
 // Étape 3 : couches (nouveau adresses.geojson)
 function naE2(){
-  const N={don:412,absent:96,inoccupe:31,refus:12,pompier:25,supprimer:7};
-  return naApercu()
-    +'<p class="note">Génère le nouveau fichier <b>adresses.geojson</b> pour la saison <b>'+esc(NA.suiv)+'</b> : on retire les adresses inoccupées et « à supprimer », et on ne garde que les identifiants dans la table attributaire.</p>'
-    +TYPES_ADR.map(([t,l])=>'<label class="affc"><input type="checkbox"'+(t==='supprimer'?'':' checked')+'> '+l+' <span class="note">('+N[t]+')</span></label>').join('')
-    +'<label class="affc"><input type="checkbox"> Garder aussi les adresses non renseignées cette année <span class="note">(1 250)</span></label>'
-    +'<label class="affc"><input type="checkbox" checked> Ajouter les points posés à la main ou à la position <span class="note">(58)</span></label>'
-    +'<label class="affc"><input type="checkbox" checked> Garder le champ adresse (adr) dans la couche</label>'
-    +'<p class="note">Décocher « adresse » ne convient que si l\'adresse est lue ailleurs (feuille Annee_precedente) : sinon la carte n\'affichera plus d\'adresse.</p>'
-    +'<p class="note" style="font-weight:700">Résultat (fictif) : 1 180 adresses gardées sur 1 262 (82 retirées).</p>'
-    +'<button class="bt na-nc">⬇️ Télécharger adresses.geojson</button>'
-    +'<p class="note">Étape manuelle : tu déposes ensuite ce fichier dans le dépôt GitHub de la nouvelle année (garde l\'ancien de côté).</p>';
+  return '<p class="note">Génère le nouveau fichier <b>adresses.geojson</b> pour la saison <b>'+esc(NA.suiv)+'</b>. Réglage proposé : on retire les adresses « inoccupé » et « à supprimer » ; l\'adresse (adr) est conservée dans la couche.</p>'
+    +blocAdresses()
+    +'<p class="note">Génère le fichier avant de passer à l\'étape suivante : les cases cochées ne sont pas gardées si tu reviens en arrière. Étape manuelle : dépose ensuite le fichier dans le dépôt GitHub de la nouvelle année (garde l\'ancien de côté).</p>';
 }
 
 // Étape 4 : création du fichier
@@ -2028,6 +2020,7 @@ function naRendre(){
   const ap=$('na-appl');if(ap)ap.onclick=()=>{m.querySelectorAll('.na-nb').forEach(i=>{i.value=$('na-def').value})};
   m.querySelectorAll('.na-ck').forEach(c=>c.onchange=()=>{NA.fait[c.dataset.k]=c.checked;naCompte()});
   naCompte();
+ if(NA.etape===1&&$('dl-adr')){if($('adr-t-inoccupe'))$('adr-t-inoccupe').checked=false;brancherAdresses('#na')}
   m.querySelector('.corps').scrollTop=0;
 }
 function ouvrirNouvelleAnnee(an,clo){
